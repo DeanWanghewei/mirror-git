@@ -1,0 +1,133 @@
+version: '3.9'
+
+services:
+  # MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: mirror-git-mysql
+    platform: linux/amd64  # Ensure x86 architecture
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mirror_git}
+      MYSQL_USER: ${MYSQL_USER:-mirror_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mirror123456}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mirror-net
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max_connections=1000
+      --max_allowed_packet=512M
+
+  # Mirror Git Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: "3.11"
+    image: mirror-git:latest
+    container_name: mirror-git-app
+    platform: linux/amd64  # Ensure x86 architecture
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # GitHub Configuration
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
+      GITHUB_OWNER: ${GITHUB_OWNER}
+
+      # Gitea Configuration
+      GITEA_URL: ${GITEA_URL}
+      GITEA_TOKEN: ${GITEA_TOKEN}
+      GITEA_USERNAME: ${GITEA_USERNAME}
+      GITEA_PASSWORD: ${GITEA_PASSWORD}
+
+      # Sync Configuration
+      LOCAL_REPO_PATH: ${LOCAL_REPO_PATH:-/app/data/repos}
+      SYNC_INTERVAL: ${SYNC_INTERVAL:-3600}
+      SYNC_TIMEOUT: ${SYNC_TIMEOUT:-1800}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      RETRY_WAIT: ${RETRY_WAIT:-60}
+      CONCURRENT_SYNC: ${CONCURRENT_SYNC:-3}
+
+      # Logging Configuration
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FILE: ${LOG_FILE:-/app/logs/sync.log}
+      LOG_MAX_SIZE: ${LOG_MAX_SIZE:-100}
+      LOG_BACKUP_COUNT: ${LOG_BACKUP_COUNT:-10}
+
+      # Database Configuration - MySQL
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-mirror_user}:${MYSQL_PASSWORD:-mirror123456}@mysql:3306/${MYSQL_DATABASE:-mirror_git}?charset=utf8mb4
+      ENABLE_DATABASE: "true"
+      DATABASE_TYPE: ${DATABASE_TYPE:-mysql}
+
+      # Application Configuration
+      CONFIG_FILE: /app/.env
+      TZ: ${TZ:-Asia/Shanghai}
+
+      # Proxy Configuration (if needed)
+      USE_PROXY: ${USE_PROXY:-false}
+      PROXY_URL: ${PROXY_URL}
+      PROXY_USERNAME: ${PROXY_USERNAME}
+      PROXY_PASSWORD: ${PROXY_PASSWORD}
+
+      # SSH Configuration (if needed)
+      USE_SSH: ${USE_SSH:-false}
+      SSH_KEY_PATH: ${SSH_KEY_PATH}
+
+      # Advanced Settings
+      SKIP_EXISTING_REPOS: ${SKIP_EXISTING_REPOS:-true}
+      INCLUDE_FORKS: ${INCLUDE_FORKS:-true}
+      INCLUDE_PRIVATE: ${INCLUDE_PRIVATE:-true}
+      REPO_FILTER: ${REPO_FILTER}
+
+      # Notification Configuration
+      ENABLE_NOTIFICATION: ${ENABLE_NOTIFICATION:-false}
+      NOTIFICATION_TYPE: ${NOTIFICATION_TYPE}
+      NOTIFICATION_EMAIL: ${NOTIFICATION_EMAIL}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL}
+      NOTIFICATION_SLACK_WEBHOOK: ${NOTIFICATION_SLACK_WEBHOOK}
+
+    ports:
+      - "${APP_PORT:-8000}:8000"
+
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./src:/app/src
+      - ./.env:/app/.env:ro
+
+    networks:
+      - mirror-net
+
+    # Wait for MySQL to be ready before starting
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  mirror-net:
+    driver: bridge

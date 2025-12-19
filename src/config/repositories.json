@@ -1,0 +1,44 @@
+{
+  "description": "GitHub 仓库镜像列表配置",
+  "version": "1.0",
+  "repositories": [
+    {
+      "name": "kubernetes/kubernetes",
+      "owner": "kubernetes",
+      "url": "https://github.com/kubernetes/kubernetes.git",
+      "description": "Kubernetes 项目",
+      "enabled": true,
+      "tags": ["infrastructure", "container-orchestration"]
+    },
+    {
+      "name": "torvalds/linux",
+      "owner": "torvalds",
+      "url": "https://github.com/torvalds/linux.git",
+      "description": "Linux 内核",
+      "enabled": true,
+      "tags": ["kernel", "operating-system"]
+    },
+    {
+      "name": "tensorflow/tensorflow",
+      "owner": "tensorflow",
+      "url": "https://github.com/tensorflow/tensorflow.git",
+      "description": "TensorFlow 机器学习框架",
+      "enabled": true,
+      "tags": ["machine-learning", "deep-learning"]
+    },
+    {
+      "name": "python/cpython",
+      "owner": "python",
+      "url": "https://github.com/python/cpython.git",
+      "description": "Python 编程语言",
+      "enabled": true,
+      "tags": ["programming-language"]
+    }
+  ],
+  "notes": {
+    "enabled_field": "设置为 false 可临时禁用某个仓库同步，不删除本地副本",
+    "tags_field": "用于分类和过滤仓库",
+    "url_field": "GitHub 仓库的 HTTPS 地址",
+    "custom_fields": "可以根据需要添加自定义字段"
+  }
+}

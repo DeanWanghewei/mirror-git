@@ -1,0 +1,52 @@
+# Core Dependencies (核心依赖)
+# GitHub and Gitea API client
+requests>=2.28.0
+
+# Configuration management
+python-dotenv>=0.20.0
+pyyaml>=6.0
+
+# Git operations
+GitPython>=3.1.0
+
+# Task scheduling
+APScheduler>=3.10.0
+
+# Logging and monitoring
+colorlog>=6.7.0
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Type hints and validation
+pydantic>=2.0.0
+
+# HTTP client with better features
+httpx>=0.23.0
+
+# Data handling
+dataclasses-json>=0.5.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+pymysql>=1.1.0
+cryptography>=40.0.0
+
+# Testing (开发依赖)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+requests-mock>=1.11.0
+httpx-mock>=0.31.0
+
+# Code quality (代码质量)
+# black>=22.0.0
+# flake8>=5.0.0
+# isort>=5.11.0
+# mypy>=0.990
+
+# Documentation (文档)
+# sphinx>=5.3.0
+# sphinx-rtd-theme>=1.1.0

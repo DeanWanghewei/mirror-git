@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 仓库镜像同步系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1976D2 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.3rem;
+        }
+
+        .main-container {
+            padding: 20px 0;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #1976D2;
+            border-color: #1976D2;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .status-failed {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+
+        .status-syncing {
+            background-color: #fff9c4;
+            color: #f57f17;
+        }
+
+        .dashboard-stat {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 15px;
+        }
+
+        .dashboard-stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .dashboard-stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .tab-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .nav-tabs .nav-link.active {
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        /* Toast Notification Styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-message {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast-message.hide {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+
+        .toast-message.success {
+            border-left: 4px solid var(--success-color);
+            color: #2e7d32;
+        }
+
+        .toast-message.error {
+            border-left: 4px solid var(--danger-color);
+            color: #c62828;
+        }
+
+        .toast-message.warning {
+            border-left: 4px solid var(--warning-color);
+            color: #e65100;
+        }
+
+        .toast-message.info {
+            border-left: 4px solid var(--primary-color);
+            color: #0d47a1;
+        }
+
+        .toast-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: #000;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="bi bi-arrow-repeat"></i> GitHub 镜像同步
+            </span>
+            <span class="navbar-text text-white">
+                v1.0.0
+            </span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid main-container">
+        <!-- Status Alert -->
+        <div id="statusAlert"></div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" role="tablist" style="margin-bottom: -1px;">
+            <li class="nav-item">
+                <a class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" href="#dashboard">
+                    <i class="bi bi-speedometer2"></i> 监控面板
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="repositories-tab" data-bs-toggle="tab" href="#repositories">
+                    <i class="bi bi-collection"></i> 仓库管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="sync-tab" data-bs-toggle="tab" href="#sync">
+                    <i class="bi bi-arrow-repeat"></i> 同步控制
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="config-tab" data-bs-toggle="tab" href="#config">
+                    <i class="bi bi-gear"></i> 系统设置
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dashboard">
+                <div class="row" style="margin-top: 20px;">
+                    <div class="col-md-3">
+                        <div class="dashboard-stat">
+                            <i class="bi bi-collection" style="font-size: 2rem; color: var(--primary-color);"></i>
+                            <div class="dashboard-stat-value" id="totalRepos">-</div>
+                            <div class="dashboard-stat-label">总仓库数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-stat">
+                            <i class="bi bi-check-circle" style="font-size: 2rem; color: var(--success-color);"></i>
+                            <div class="dashboard-stat-value" id="syncedRepos">-</div>
+                            <div class="dashboard-stat-label">已同步</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-stat">
+                            <i class="bi bi-exclamation-circle" style="font-size: 2rem; color: var(--danger-color);"></i>
+                            <div class="dashboard-stat-value" id="failedRepos">-</div>
+                            <div class="dashboard-stat-label">同步失败</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-stat">
+                            <i class="bi bi-percent" style="font-size: 2rem; color: var(--warning-color);"></i>
+                            <div class="dashboard-stat-value" id="successRate">-</div>
+                            <div class="dashboard-stat-label">成功率</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <i class="bi bi-clock-history"></i> 最近同步
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover" id="recentSyncTable">
+                            <thead>
+                                <tr>
+                                    <th>仓库</th>
+                                    <th>操作</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Repositories Tab -->
+            <div class="tab-pane fade" id="repositories">
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRepoModal">
+                        <i class="bi bi-plus-circle"></i> 添加仓库
+                    </button>
+                    <button class="btn btn-success" id="syncAllBtn">
+                        <i class="bi bi-arrow-repeat"></i> 全部同步
+                    </button>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-body">
+                        <table class="table table-hover" id="repositoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>仓库名</th>
+                                    <th>GitHub 地址</th>
+                                    <th>状态</th>
+                                    <th>大小</th>
+                                    <th>最后同步</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sync Control Tab -->
+            <div class="tab-pane fade" id="sync">
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <i class="bi bi-arrow-repeat"></i> 同步控制
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-lg btn-success" id="syncNowBtn" style="width: 100%; padding: 20px;">
+                            <i class="bi bi-play-circle"></i> 立即同步所有仓库
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-hourglass"></i> 同步历史
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover" id="syncHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>仓库</th>
+                                    <th>操作</th>
+                                    <th>状态</th>
+                                    <th>耗时</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Config Tab -->
+            <div class="tab-pane fade" id="config">
+                <div class="row" style="margin-top: 20px;">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-github"></i> GitHub 配置
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">GitHub Token</label>
+                                    <input type="password" class="form-control" id="githubToken" placeholder="输入 GitHub Token">
+                                </div>
+                                <button class="btn btn-primary" id="validateGithubBtn">
+                                    <i class="bi bi-check-circle"></i> 验证连接
+                                </button>
+                                <div id="githubStatus" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-git"></i> Gitea 配置
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Gitea URL</label>
+                                    <input type="text" class="form-control" id="giteaUrl" placeholder="https://gitea.example.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Gitea Token</label>
+                                    <input type="password" class="form-control" id="giteaToken" placeholder="输入 Gitea Token">
+                                </div>
+                                <button class="btn btn-primary" id="validateGiteaBtn">
+                                    <i class="bi bi-check-circle"></i> 验证连接
+                                </button>
+                                <div id="giteaStatus" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Repository Modal -->
+    <div class="modal fade" id="addRepoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle"></i> 添加仓库
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">仓库 URL</label>
+                        <input type="text" class="form-control" id="repoUrl" placeholder="https://github.com/owner/repo">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">镜像名称（可选）</label>
+                        <input type="text" class="form-control" id="repoName" placeholder="默认为仓库名">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Gitea 组织/命名空间（可选）</label>
+                        <input type="text" class="form-control" id="giteaOwner" placeholder="不填则使用默认用户命名空间">
+                        <small class="form-text text-muted">
+                            用于公共仓库镜像。指定组织创建仓库，权限不足时自动使用个人空间。
+                        </small>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="syncNow" checked>
+                        <label class="form-check-label" for="syncNow">
+                            添加后立即同步
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="addRepoBtn">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API Base URL
+        const API_BASE = '/api';
+
+        // Toast Notification System
+        class ToastNotification {
+            constructor() {
+                this.container = document.getElementById('toastContainer');
+            }
+
+            show(message, type = 'info', duration = 4000) {
+                const toastId = 'toast-' + Date.now();
+                const iconMap = {
+                    success: 'bi-check-circle-fill',
+                    error: 'bi-exclamation-circle-fill',
+                    warning: 'bi-exclamation-triangle-fill',
+                    info: 'bi-info-circle-fill'
+                };
+
+                const toast = document.createElement('div');
+                toast.className = `toast-message ${type}`;
+                toast.id = toastId;
+                toast.innerHTML = `
+                    <i class="bi ${iconMap[type]} toast-icon"></i>
+                    <div class="toast-content">${this.escapeHtml(message)}</div>
+                    <button class="toast-close" onclick="toast_${toastId}()">
+                        <i class="bi bi-x"></i>
+                    </button>
+                `;
+
+                this.container.appendChild(toast);
+
+                // Create close function
+                window[`toast_${toastId}`] = () => {
+                    toast.classList.add('hide');
+                    setTimeout(() => toast.remove(), 300);
+                };
+
+                // Auto remove after duration
+                if (duration > 0) {
+                    setTimeout(() => {
+                        if (document.getElementById(toastId)) {
+                            window[`toast_${toastId}`]();
+                        }
+                    }, duration);
+                }
+            }
+
+            success(message, duration = 4000) {
+                this.show(message, 'success', duration);
+            }
+
+            error(message, duration = 5000) {
+                this.show(message, 'error', duration);
+            }
+
+            warning(message, duration = 4000) {
+                this.show(message, 'warning', duration);
+            }
+
+            info(message, duration = 4000) {
+                this.show(message, 'info', duration);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        const toast = new ToastNotification();
+
+        // Loading utilities
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+
+        // API wrapper with error handling
+        async function apiCall(endpoint, options = {}) {
+            const method = options.method || 'GET';
+            const headers = options.headers || {};
+            const body = options.body;
+
+            try {
+                if (method !== 'GET') {
+                    showLoading();
+                }
+
+                const fetchOptions = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...headers
+                    }
+                };
+
+                if (body) {
+                    fetchOptions.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, fetchOptions);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || `请求失败 (${response.status})`);
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load dashboard data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            loadRepositories();
+            loadSyncHistory();
+
+            // Add event listeners
+            document.getElementById('syncNowBtn').addEventListener('click', syncNow);
+            document.getElementById('syncAllBtn').addEventListener('click', syncAll);
+            document.getElementById('addRepoBtn').addEventListener('click', addRepository);
+            document.getElementById('validateGithubBtn').addEventListener('click', validateGithub);
+            document.getElementById('validateGiteaBtn').addEventListener('click', validateGitea);
+        });
+
+        async function loadDashboard() {
+            try {
+                const data = await apiCall('/monitor/dashboard');
+
+                document.getElementById('totalRepos').textContent = data.repositories?.total || 0;
+                document.getElementById('syncedRepos').textContent = data.sync?.success || 0;
+                document.getElementById('failedRepos').textContent = data.sync?.failed || 0;
+                document.getElementById('successRate').textContent = (data.sync?.success_rate || 0).toFixed(1) + '%';
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                // Don't show error toast for dashboard load - just silently fail
+            }
+        }
+
+        async function loadRepositories() {
+            try {
+                const data = await apiCall('/repositories');
+
+                const tbody = document.querySelector('#repositoriesTable tbody');
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">还没有添加仓库</td></tr>';
+                    return;
+                }
+
+                data.forEach(repo => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${repo.name}</td>
+                        <td><a href="${repo.url}" target="_blank">${repo.url}</a></td>
+                        <td><span class="status-badge status-${repo.last_sync_status || 'unknown'}">${repo.last_sync_status || '-'}</span></td>
+                        <td>${(repo.size_mb || 0).toFixed(2)} MB</td>
+                        <td>${repo.last_sync_time || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="syncRepository(${repo.id})" title="同步此仓库">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Failed to load repositories:', error);
+            }
+        }
+
+        async function loadSyncHistory() {
+            try {
+                const data = await apiCall('/sync/history?limit=10');
+
+                const tbody = document.querySelector('#syncHistoryTable tbody');
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">还没有同步记录</td></tr>';
+                    return;
+                }
+
+                data.forEach(record => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${record.repository_name}</td>
+                        <td>${record.operation_type}</td>
+                        <td><span class="status-badge status-${record.status || 'unknown'}">${record.status || '-'}</span></td>
+                        <td>${(record.duration_seconds || 0).toFixed(2)}s</td>
+                        <td>${new Date(record.created_at).toLocaleString()}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Failed to load sync history:', error);
+            }
+        }
+
+        async function syncNow() {
+            try {
+                toast.info('正在同步所有仓库...');
+                const data = await apiCall('/sync/all', { method: 'POST' });
+                toast.success(`同步完成: ${data.success || 0} 成功, ${data.failed || 0} 失败`);
+                loadDashboard();
+                loadRepositories();
+                loadSyncHistory();
+            } catch (error) {
+                toast.error('同步失败: ' + (error.message || '未知错误'));
+                console.error('Sync error:', error);
+            }
+        }
+
+        async function syncAll() {
+            syncNow();
+        }
+
+        async function syncRepository(repoId) {
+            try {
+                toast.info('正在同步仓库...');
+                const data = await apiCall(`/repositories/${repoId}/sync`, { method: 'POST' });
+                if (data.status === 'success') {
+                    toast.success(`✓ ${data.repository} 同步完成`);
+                } else {
+                    toast.warning(`${data.repository} 同步: ${data.error || '完成'}`);
+                }
+                loadDashboard();
+                loadRepositories();
+                loadSyncHistory();
+            } catch (error) {
+                toast.error('同步启动失败: ' + (error.message || '未知错误'));
+                console.error('Sync error:', error);
+            }
+        }
+
+        async function addRepository() {
+            const url = document.getElementById('repoUrl').value;
+            const name = document.getElementById('repoName').value || url.split('/').pop().replace('.git', '');
+            const giteaOwner = document.getElementById('giteaOwner').value || null;
+
+            if (!url) {
+                toast.warning('请输入仓库 URL');
+                return;
+            }
+
+            try {
+                toast.info('正在添加仓库...');
+                const response = await fetch(`${API_BASE}/repositories`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        owner: 'mirror',
+                        url: url,
+                        enabled: true,
+                        gitea_owner: giteaOwner
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '添加失败');
+                }
+
+                toast.success('✓ 仓库已添加: ' + name);
+                bootstrap.Modal.getInstance(document.getElementById('addRepoModal')).hide();
+                document.getElementById('repoUrl').value = '';
+                document.getElementById('repoName').value = '';
+                document.getElementById('giteaOwner').value = '';
+                loadRepositories();
+            } catch (error) {
+                toast.error('添加失败: ' + (error.message || '未知错误'));
+                console.error('Add repo error:', error);
+            }
+        }
+
+        async function validateGithub() {
+            const token = document.getElementById('githubToken').value;
+            if (!token) {
+                toast.warning('请输入 GitHub Token');
+                return;
+            }
+
+            try {
+                toast.info('正在验证 GitHub Token...');
+                const response = await fetch(`${API_BASE}/config/validate/github`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await response.json();
+                const statusDiv = document.getElementById('githubStatus');
+
+                if (!response.ok) {
+                    statusDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ${data.detail || '验证失败'}</div>`;
+                    toast.error('GitHub 验证失败: ' + (data.detail || '未知错误'));
+                    return;
+                }
+
+                if (data.valid) {
+                    statusDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ✓ ' + (data.message || 'Token 有效') + '</div>';
+                    toast.success('✓ GitHub Token 有效');
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ' + (data.message || 'Token 无效') + '</div>';
+                    toast.error('GitHub Token 无效: ' + (data.message || ''));
+                }
+            } catch (error) {
+                document.getElementById('githubStatus').innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> 验证失败: 网络错误</div>';
+                toast.error('GitHub 验证失败: ' + (error.message || '网络错误'));
+                console.error('GitHub validation error:', error);
+            }
+        }
+
+        async function validateGitea() {
+            const url = document.getElementById('giteaUrl').value;
+            const token = document.getElementById('giteaToken').value;
+
+            if (!url || !token) {
+                toast.warning('请输入 Gitea URL 和 Token');
+                return;
+            }
+
+            try {
+                toast.info('正在验证 Gitea 连接...');
+                const response = await fetch(`${API_BASE}/config/validate/gitea`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, token })
+                });
+
+                const data = await response.json();
+                const statusDiv = document.getElementById('giteaStatus');
+
+                if (!response.ok) {
+                    statusDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ${data.detail || '验证失败'}</div>`;
+                    toast.error('Gitea 验证失败: ' + (data.detail || '未知错误'));
+                    return;
+                }
+
+                if (data.valid) {
+                    statusDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ✓ ' + (data.message || 'Gitea 连接成功') + '</div>';
+                    toast.success('✓ Gitea 连接成功');
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ' + (data.message || '连接失败') + '</div>';
+                    toast.error('Gitea 连接失败: ' + (data.message || ''));
+                }
+            } catch (error) {
+                document.getElementById('giteaStatus').innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> 验证失败: 网络错误</div>';
+                toast.error('Gitea 验证失败: ' + (error.message || '网络错误'));
+                console.error('Gitea validation error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
