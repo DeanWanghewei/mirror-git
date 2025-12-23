@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from ..config.config import load_config
 from ..logger.logger import init_default_logger
 from ..models import init_database
+from .. import __version__
 
 # Get project root
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -28,7 +29,7 @@ TEMPLATES_DIR = WEB_ROOT / "templates"
 app = FastAPI(
     title="GitHub Mirror Sync",
     description="Web UI for GitHub to Gitea repository synchronization",
-    version="1.0.0"
+    version=__version__
 )
 
 # Add CORS middleware
@@ -47,10 +48,13 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Setup templates
+templates = None
 if TEMPLATES_DIR.exists():
-    templates = Jinja2Templates(directory=TEMPLATES_DIR)
-else:
-    templates = None
+    try:
+        templates = Jinja2Templates(directory=TEMPLATES_DIR)
+    except (ImportError, AssertionError):
+        # jinja2 not installed, use fallback HTML
+        templates = None
 
 # Global state
 _config = None
@@ -76,7 +80,7 @@ async def startup_event():
         # Load configuration
         env_file = os.getenv("CONFIG_FILE", ".env")
         _config = load_config(env_file)
-        print(f"✓ Configuration loaded from {env_file}")
+        print(f"✓ Configuration loaded")
 
         # Initialize logging
         init_default_logger(_config.log)
@@ -87,22 +91,106 @@ async def startup_event():
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize database
-        db_url = os.getenv("DATABASE_URL", "sqlite:///mirror_sync.db")
-        # Ensure SQLite URL has proper format
-        if db_url.startswith("./") or db_url.startswith("/"):
+        # Use sync.db for backward compatibility with older versions
+        db_url = os.getenv("DATABASE_URL", "sqlite:///app/data/sync.db")
+        print(f"ℹ Database URL: {db_url.split('@')[0] if '@' in db_url else db_url}")  # Hide password
+
+        # Check for data migration from old database file
+        if db_url.startswith("sqlite:///"):
+            db_path = Path(db_url[len("sqlite:///"):])
+            old_db_path = db_path.parent / "mirror_sync.db"
+
+            # If using default path and old database exists but new doesn't, inform user
+            if not db_path.exists() and old_db_path.exists() and "sync.db" in str(db_path):
+                print(f"\n⚠️  Warning: Found old database at {old_db_path}")
+                print(f"   Current database: {db_path}")
+                print(f"   Your data is in the old database file.")
+                print(f"\n   To use your existing data, set environment variable:")
+                print(f"   DATABASE_URL=sqlite:///{old_db_path}")
+                print(f"\n   Or rename {old_db_path.name} to {db_path.name}")
+                print()
+
+        # Ensure SQLite URL has proper format and create directory
+        if db_url.startswith("sqlite:///"):
+            # Extract path from sqlite:///path/to/db.db
+            # Keep absolute path if it starts with /
+            db_path_str = db_url[len("sqlite:///"):]
+
+            # Ensure absolute path in container
+            if not db_path_str.startswith('/'):
+                db_path_str = '/' + db_path_str
+
+            db_path = Path(db_path_str)
+
+            # Create directory for SQLite database if it doesn't exist
+            db_dir = db_path.parent
+            db_dir.mkdir(parents=True, exist_ok=True)
+            print(f"✓ SQLite database directory created: {db_dir}")
+            print(f"✓ Database file path: {db_path}")
+        elif db_url.startswith("./") or db_url.startswith("/"):
             db_path = db_url.lstrip("./")
             db_url = f"sqlite:///{db_path}"
             # Create directory for SQLite database if it doesn't exist
             db_dir = Path(db_path).parent
             db_dir.mkdir(parents=True, exist_ok=True)
+            print(f"✓ SQLite database directory created: {db_dir}")
         elif not db_url.startswith("sqlite://") and not db_url.startswith("postgresql") and not db_url.startswith("mysql"):
             db_path = db_url
             db_url = f"sqlite:///{db_url}"
             # Create directory for SQLite database if it doesn't exist
             db_dir = Path(db_path).parent
             db_dir.mkdir(parents=True, exist_ok=True)
-        _db = init_database(db_url)
-        print(f"✓ Database initialized: {db_url}")
+            print(f"✓ SQLite database directory created: {db_dir}")
+
+        try:
+            _db = init_database(db_url)
+            print(f"✓ Database initialized successfully")
+        except Exception as db_error:
+            error_msg = str(db_error)
+            print(f"✗ Database initialization failed: {error_msg}")
+
+            # Provide helpful error messages
+            if "Can't connect to MySQL server" in error_msg or "Connection refused" in error_msg:
+                print("\n" + "="*60)
+                print("❌ MySQL Connection Failed")
+                print("="*60)
+                print("\nPossible causes:")
+                print("1. MySQL container is not running")
+                print("2. Incorrect DATABASE_URL configuration")
+                print("3. Network connectivity issues")
+                print("\nSolutions:")
+                print("━" * 60)
+                print("\n📌 Option 1: Use SQLite (Recommended for simple deployments)")
+                print("   Set environment variable:")
+                print("   DATABASE_URL=sqlite:///app/data/mirror_sync.db")
+                print("\n📌 Option 2: Fix MySQL connection")
+                print("   a) Check if MySQL container is running:")
+                print("      docker ps | grep mysql")
+                print("   b) Verify both containers are on the same network:")
+                print("      docker network inspect mirror-net")
+                print("   c) Use correct DATABASE_URL format:")
+                print("      mysql+pymysql://user:password@container_name:3306/database")
+                print("\n📌 Option 3: Start MySQL container")
+                print("   docker run -d --name mirror-git-mysql \\")
+                print("     --network mirror-net \\")
+                print("     -e MYSQL_ROOT_PASSWORD=root123456 \\")
+                print("     -e MYSQL_DATABASE=mirror_git \\")
+                print("     -e MYSQL_USER=mirror_user \\")
+                print("     -e MYSQL_PASSWORD=mirror123456 \\")
+                print("     mysql:8.0")
+                print("\n" + "="*60)
+
+            elif "No such file or directory" in error_msg and "sqlite" in db_url.lower():
+                print("\n❌ SQLite database directory does not exist")
+                print("Solution: Ensure the directory is mounted correctly")
+                print("  -v $(pwd)/data:/app/data")
+
+            raise RuntimeError(
+                f"Database initialization failed. Please check the error messages above and "
+                f"ensure your database is properly configured. "
+                f"For simple deployments, we recommend using SQLite: "
+                f"DATABASE_URL=sqlite:///app/data/mirror_sync.db"
+            ) from db_error
 
         # Create local repository storage directory
         local_repo_dir = Path(_config.sync.local_path)
@@ -197,7 +285,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "GitHub Mirror Sync",
-        "version": "1.0.0"
+        "version": __version__
     }
 
 
@@ -223,7 +311,7 @@ async def get_version():
     """Get application version."""
     return {
         "name": "GitHub Mirror Sync",
-        "version": "1.0.0",
+        "version": __version__,
         "api_version": "v1"
     }
 

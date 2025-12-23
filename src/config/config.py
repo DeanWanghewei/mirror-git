@@ -15,13 +15,15 @@ from pydantic import BaseModel, Field, validator
 
 class GitHubConfig(BaseModel):
     """GitHub API configuration."""
-    token: str = Field(..., description="GitHub personal access token")
+    token: Optional[str] = Field(default=None, description="GitHub personal access token (optional for public repos)")
     api_url: str = Field(default="https://api.github.com", description="GitHub API URL")
 
     @validator("token")
-    def token_not_empty(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("GitHub token cannot be empty")
+    def token_validation(cls, v: Optional[str]) -> Optional[str]:
+        """Validate token - allow None or empty for public repos."""
+        if v is not None and v.strip() == "":
+            # Convert empty string to None
+            return None
         return v
 
 
@@ -122,32 +124,62 @@ class ConfigManager:
         self.repositories: Dict[str, Any] = {}
 
     def load(self) -> SystemConfig:
-        """Load and parse configuration from .env and JSON files.
+        """Load and parse configuration from environment variables.
+
+        Configuration can be loaded from:
+        1. .env file (if exists) - will be loaded first
+        2. System environment variables - always checked
 
         Returns:
             Parsed SystemConfig object
 
         Raises:
-            FileNotFoundError: If .env file not found
-            ValueError: If configuration is invalid
+            ValueError: If required configuration is missing or invalid
         """
-        # Load environment variables
-        if not self.env_file.exists():
-            raise FileNotFoundError(f"Configuration file not found: {self.env_file}")
-
-        load_dotenv(self.env_file)
+        # Load environment variables from .env file if it exists
+        # In Docker/production, environment variables are set directly
+        if self.env_file.exists():
+            load_dotenv(self.env_file)
+            print(f"✓ Loaded configuration from {self.env_file}")
+        else:
+            print(f"ℹ .env file not found, using environment variables directly")
 
         # Parse configuration from environment variables
+        # GitHub token is optional - only needed for private repos
+        github_token = self._get_env("GITHUB_TOKEN", required=False)
+        if github_token and github_token.strip():
+            github_token = github_token.strip()
+        else:
+            github_token = None
+            print("ℹ GitHub token not provided - only public repositories will be accessible")
+
         github_config = GitHubConfig(
-            token=self._get_env("GITHUB_TOKEN", required=True),
+            token=github_token,
             api_url=self._get_env("GITHUB_API_URL", default="https://api.github.com")
         )
 
+        # Load Gitea configuration and print for debugging
+        gitea_url = self._get_env("GITEA_URL", required=True)
+        gitea_token = self._get_env("GITEA_TOKEN", required=True)
+        gitea_username = self._get_env("GITEA_USERNAME", required=True)
+        gitea_password = self._get_env("GITEA_PASSWORD")
+
+        print(f"""
+╔══════════════════════════════════════════════════════════════╗
+║  Gitea 配置信息                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  URL:      {gitea_url:<49} ║
+║  Username: {gitea_username:<49} ║
+║  Token:    {('*' * 8 + gitea_token[-4:] if gitea_token and len(gitea_token) > 8 else '***'):<49} ║
+║  Password: {('已设置' if gitea_password else '未设置'):<49} ║
+╚══════════════════════════════════════════════════════════════╝
+        """)
+
         gitea_config = GiteaConfig(
-            url=self._get_env("GITEA_URL", required=True),
-            token=self._get_env("GITEA_TOKEN", required=True),
-            username=self._get_env("GITEA_USERNAME", required=True),
-            password=self._get_env("GITEA_PASSWORD")
+            url=gitea_url,
+            token=gitea_token,
+            username=gitea_username,
+            password=gitea_password
         )
 
         sync_config = SyncConfig(
@@ -217,7 +249,7 @@ class ConfigManager:
         with open(self.repo_config_file, "w", encoding="utf-8") as f:
             json.dump({
                 "description": "GitHub 仓库镜像列表配置",
-                "version": "1.0",
+                "version": "1.2",
                 "repositories": repositories
             }, f, indent=2, ensure_ascii=False)
         self.repositories = {repo["name"]: repo for repo in repositories}
@@ -292,7 +324,10 @@ class ConfigManager:
         """
         value = os.getenv(key, default)
         if required and not value:
-            raise ValueError(f"Required configuration not found: {key}")
+            raise ValueError(
+                f"Required configuration not found: {key}\n"
+                f"Please set the {key} environment variable or add it to your .env file"
+            )
         return value or ""
 
 

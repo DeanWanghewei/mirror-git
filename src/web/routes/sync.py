@@ -2,16 +2,17 @@
 Synchronization control API routes.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 
 router = APIRouter()
 
 
 @router.post("/all")
-async def sync_all_repositories():
-    """Synchronize all repositories."""
+async def sync_all_repositories(background_tasks: BackgroundTasks):
+    """Synchronize all repositories asynchronously in the background."""
     from ..app import get_app_state
     from ...sync.sync_engine import SyncEngine
+    from ...models import Repository
 
     state = get_app_state()
     db = state.get("db")
@@ -21,19 +22,47 @@ async def sync_all_repositories():
         raise HTTPException(status_code=503, detail="System not ready")
 
     try:
-        engine = SyncEngine(
-            config.github,
-            config.gitea,
-            config.sync,
-            db,
-            config.log,
-            config.proxy
-        )
+        # Get count of repositories to sync
+        session = db.get_session()
+        try:
+            repos = session.query(Repository).filter(Repository.enabled == True).all()
+            repo_count = len(repos)
 
-        result = engine.sync_all()
-        engine.close()
+            # Update all to syncing status
+            for repo in repos:
+                repo.last_sync_status = "syncing"
+            session.commit()
+        finally:
+            session.close()
 
-        return result
+        # Define background task function
+        def run_sync_all():
+            """Background task to sync all repositories."""
+            try:
+                engine = SyncEngine(
+                    config.github,
+                    config.gitea,
+                    config.sync,
+                    db,
+                    config.log,
+                    config.proxy
+                )
+
+                engine.sync_all()
+                engine.close()
+            except Exception as e:
+                # Log error but don't crash
+                import logging
+                logging.error(f"Background sync_all failed: {e}")
+
+        # Add task to background
+        background_tasks.add_task(run_sync_all)
+
+        return {
+            "status": "started",
+            "message": f"同步任务已启动，正在后台同步 {repo_count} 个仓库",
+            "total_repositories": repo_count
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

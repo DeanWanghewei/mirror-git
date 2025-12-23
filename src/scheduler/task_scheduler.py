@@ -241,7 +241,31 @@ class TaskScheduler:
         """
         try:
             self.logger.info(f"Starting scheduled sync for: {repo_name}")
-            result = self.sync_engine.sync_repository(repo_name, github_url)
+
+            # Get repository from database to get gitea_owner configuration
+            from ..models import Repository
+            session = self.sync_engine.db.get_session()
+            try:
+                repo = session.query(Repository).filter(
+                    Repository.name == repo_name,
+                    Repository.url == github_url
+                ).first()
+
+                if repo:
+                    # If gitea_owner is set, treat it as organization
+                    gitea_org_name = repo.gitea_owner
+                    result = self.sync_engine.sync_repository(
+                        repo_name,
+                        github_url,
+                        gitea_owner=self.sync_engine.gitea_config.username if gitea_org_name else None,
+                        gitea_org=gitea_org_name
+                    )
+                else:
+                    # Repository not in database, use default (user namespace)
+                    result = self.sync_engine.sync_repository(repo_name, github_url)
+            finally:
+                session.close()
+
             return result
         except Exception as e:
             self.logger.error(f"Scheduled sync for {repo_name} failed: {e}", exc_info=True)

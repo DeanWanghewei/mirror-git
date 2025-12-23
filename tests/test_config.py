@@ -95,7 +95,7 @@ def test_config_manager_get_repositories(temp_env_file, tmp_path):
     repo_file.write_text("""
 {
     "description": "Test repositories",
-    "version": "1.0",
+    "version": "1.2",
     "repositories": [
         {
             "name": "test-repo",

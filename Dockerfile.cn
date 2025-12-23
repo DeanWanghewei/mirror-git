@@ -1,10 +1,11 @@
 # Multi-stage build for GitHub Mirror Sync
+# 使用国内镜像源优化版本 - 适用于 Docker Hub 访问不稳定的环境
 # Build stage
-FROM python:3.11-slim AS builder
+FROM registry.docker-cn.com/library/python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# 使用阿里云 pip 源加速依赖安装
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -12,11 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --user --no-cache-dir -r requirements.txt
+RUN pip install -i https://mirrors.aliyun.com/pypi/simple/ \
+    --user --no-cache-dir -r requirements.txt
 
 # Runtime stage
-FROM python:3.11-slim
+FROM registry.docker-cn.com/library/python:3.11-slim
 
 WORKDIR /app
 
@@ -53,5 +54,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Default command - run the FastAPI application
-# 配置可通过环境变量设置: WEB_HOST, WEB_PORT, WEB_WORKERS, WEB_LOG_LEVEL
-CMD ["python", "run.py"]
+CMD ["python", "run.py", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

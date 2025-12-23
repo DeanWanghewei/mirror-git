@@ -4,7 +4,7 @@ Repository management API routes.
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -191,28 +191,109 @@ async def update_repository(repo_id: int, repo_update: RepositoryUpdate):
 
 
 @router.delete("/{repo_id}")
-async def delete_repository(repo_id: int):
-    """Delete a repository."""
+async def delete_repository(
+    repo_id: int,
+    delete_local: bool = False,
+    delete_gitea: bool = False,
+    delete_history: bool = True
+):
+    """
+    Delete a repository.
+
+    Args:
+        repo_id: Repository ID
+        delete_local: Whether to delete local clone directory (default: False)
+        delete_gitea: Whether to delete repository from Gitea (default: False)
+        delete_history: Whether to delete sync history records (default: True)
+
+    Returns:
+        Status message with details of what was deleted
+    """
+    import shutil
+    from pathlib import Path
     from ..app import get_app_state
-    from ...models import Repository
+    from ...models import Repository, SyncHistory
+    from ...clients.gitea_client import GiteaClient
 
     state = get_app_state()
     db = state.get("db")
+    config = state.get("config")
 
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
+    deleted_items = []
+    errors = []
+
     try:
         session = db.get_session()
         try:
+            # Find repository
             repo = session.query(Repository).filter(Repository.id == repo_id).first()
             if not repo:
                 raise HTTPException(status_code=404, detail="Repository not found")
 
+            repo_name = repo.name
+            repo_url = repo.url
+            local_path = repo.local_path
+            gitea_owner = repo.gitea_owner
+
+            # Delete local files if requested
+            if delete_local and local_path:
+                try:
+                    local_dir = Path(local_path)
+                    if local_dir.exists():
+                        shutil.rmtree(local_dir)
+                        deleted_items.append(f"local files at {local_path}")
+                    else:
+                        deleted_items.append(f"local path (already removed): {local_path}")
+                except Exception as e:
+                    errors.append(f"Failed to delete local files: {str(e)}")
+
+            # Delete from Gitea if requested
+            if delete_gitea and config:
+                try:
+                    gitea_client = GiteaClient(
+                        config.gitea,
+                        config.log,
+                        config.proxy
+                    )
+
+                    # Determine the owner (organization or user)
+                    owner = gitea_owner if gitea_owner else config.gitea.owner
+
+                    # Try to delete the repository
+                    if gitea_client.delete_repository(owner, repo_name):
+                        deleted_items.append(f"Gitea repository: {owner}/{repo_name}")
+                    else:
+                        errors.append(f"Failed to delete Gitea repository {owner}/{repo_name} (may not exist)")
+
+                    gitea_client.close()
+                except Exception as e:
+                    errors.append(f"Failed to delete from Gitea: {str(e)}")
+
+            # Delete sync history if requested
+            if delete_history:
+                try:
+                    history_count = session.query(SyncHistory).filter(
+                        SyncHistory.repository_id == repo_id
+                    ).delete()
+                    if history_count > 0:
+                        deleted_items.append(f"{history_count} sync history record(s)")
+                except Exception as e:
+                    errors.append(f"Failed to delete sync history: {str(e)}")
+
+            # Delete repository from database
             session.delete(repo)
             session.commit()
+            deleted_items.append(f"database record for repository '{repo_name}'")
 
-            return {"status": "success", "message": "Repository deleted"}
+            return {
+                "status": "success",
+                "message": f"Repository '{repo_name}' deleted",
+                "deleted": deleted_items,
+                "errors": errors if errors else None
+            }
         finally:
             session.close()
     except HTTPException:
@@ -222,8 +303,8 @@ async def delete_repository(repo_id: int):
 
 
 @router.post("/{repo_id}/sync")
-async def sync_repository(repo_id: int):
-    """Synchronize a specific repository."""
+async def sync_repository(repo_id: int, background_tasks: BackgroundTasks):
+    """Synchronize a specific repository asynchronously in the background."""
     from ..app import get_app_state
     from ...models import Repository
     from ...sync.sync_engine import SyncEngine
@@ -242,25 +323,49 @@ async def sync_repository(repo_id: int):
             if not repo:
                 raise HTTPException(status_code=404, detail="Repository not found")
 
-            # Create sync engine and sync repository
-            engine = SyncEngine(
-                config.github,
-                config.gitea,
-                config.sync,
-                db,
-                config.log,
-                config.proxy
-            )
+            repo_name = repo.name
+            repo_url = repo.url
+            gitea_owner = repo.gitea_owner
 
-            result = engine.sync_repository(
-                repo.name,
-                repo.url,
-                gitea_owner=None,  # Use default from config
-                gitea_org=repo.gitea_owner  # Use stored organization/namespace if specified
-            )
-            engine.close()
+            # Update status to syncing immediately
+            repo.last_sync_status = "syncing"
+            session.commit()
 
-            return result
+            # Define background task function
+            def run_sync():
+                """Background task to sync repository."""
+                try:
+                    engine = SyncEngine(
+                        config.github,
+                        config.gitea,
+                        config.sync,
+                        db,
+                        config.log,
+                        config.proxy
+                    )
+
+                    # If gitea_owner is set in database, treat it as organization
+                    # Otherwise, repo will be pushed to user namespace
+                    engine.sync_repository(
+                        repo_name,
+                        repo_url,
+                        gitea_owner=config.gitea.username if gitea_owner else None,
+                        gitea_org=gitea_owner  # Pass gitea_owner as organization parameter
+                    )
+                    engine.close()
+                except Exception as e:
+                    # Log error but don't crash
+                    import logging
+                    logging.error(f"Background sync failed for {repo_name}: {e}")
+
+            # Add task to background
+            background_tasks.add_task(run_sync)
+
+            return {
+                "status": "started",
+                "repository": repo_name,
+                "message": f"同步任务已启动，正在后台执行"
+            }
         finally:
             session.close()
     except HTTPException:

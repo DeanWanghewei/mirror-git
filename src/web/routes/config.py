@@ -13,15 +13,12 @@ router = APIRouter()
 class ConfigUpdate(BaseModel):
     """Configuration update request."""
     github_token: Optional[str] = None
-    gitea_url: Optional[str] = None
-    gitea_token: Optional[str] = None
     sync_interval: Optional[int] = None
 
 
 class ConfigResponse(BaseModel):
     """Configuration response."""
     github: Dict[str, Any]
-    gitea: Dict[str, Any]
     sync: Dict[str, Any]
     log: Dict[str, Any]
 
@@ -41,11 +38,6 @@ async def get_config():
         "github": {
             "api_url": config.github.api_url,
             "token": "***" if config.github.token else None
-        },
-        "gitea": {
-            "url": config.gitea.url,
-            "username": config.gitea.username,
-            "token": "***" if config.gitea.token else None
         },
         "sync": {
             "local_path": config.sync.local_path,
@@ -144,12 +136,6 @@ async def update_config(config_update: ConfigUpdate):
 
         if config_update.github_token:
             updates["GITHUB_TOKEN"] = config_update.github_token
-
-        if config_update.gitea_url:
-            updates["GITEA_URL"] = config_update.gitea_url
-
-        if config_update.gitea_token:
-            updates["GITEA_TOKEN"] = config_update.gitea_token
 
         if config_update.sync_interval:
             updates["SYNC_INTERVAL"] = str(config_update.sync_interval)

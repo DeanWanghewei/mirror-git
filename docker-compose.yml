@@ -43,9 +43,10 @@ services:
     container_name: mirror-git-app
     platform: linux/amd64  # Ensure x86 architecture
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
+    # Uncomment depends_on if using MySQL
+    # depends_on:
+    #   mysql:
+    #     condition: service_healthy
     environment:
       # GitHub Configuration
       GITHUB_TOKEN: ${GITHUB_TOKEN}
@@ -72,14 +73,26 @@ services:
       LOG_MAX_SIZE: ${LOG_MAX_SIZE:-100}
       LOG_BACKUP_COUNT: ${LOG_BACKUP_COUNT:-10}
 
-      # Database Configuration - MySQL
-      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-mirror_user}:${MYSQL_PASSWORD:-mirror123456}@mysql:3306/${MYSQL_DATABASE:-mirror_git}?charset=utf8mb4
+      # Database Configuration
+      # Default: SQLite (for simple deployments without MySQL)
+      # Uncomment the line below if you want to use MySQL instead
+      # DATABASE_URL: mysql+pymysql://${MYSQL_USER:-mirror_user}:${MYSQL_PASSWORD:-mirror123456}@mysql:3306/${MYSQL_DATABASE:-mirror_git}?charset=utf8mb4
+
+      # SQLite Configuration (default)
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/sync.db}
+
       ENABLE_DATABASE: "true"
-      DATABASE_TYPE: ${DATABASE_TYPE:-mysql}
+      DATABASE_TYPE: ${DATABASE_TYPE:-sqlite}
 
       # Application Configuration
-      CONFIG_FILE: /app/.env
+      # CONFIG_FILE: /app/.env  # Optional: Path to .env file (not needed if env vars are set)
       TZ: ${TZ:-Asia/Shanghai}
+
+      # Web UI Configuration
+      WEB_HOST: ${WEB_HOST:-0.0.0.0}
+      WEB_PORT: ${WEB_PORT:-8000}
+      WEB_WORKERS: ${WEB_WORKERS:-1}
+      WEB_LOG_LEVEL: ${WEB_LOG_LEVEL:-info}
 
       # Proxy Configuration (if needed)
       USE_PROXY: ${USE_PROXY:-false}
@@ -111,7 +124,8 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./src:/app/src
-      - ./.env:/app/.env:ro
+      # Optional: Mount .env file if you prefer file-based config over environment variables
+      # - ./.env:/app/.env:ro
 
     networks:
       - mirror-net

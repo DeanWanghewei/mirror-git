@@ -4,46 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub 仓库镜像同步系统</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="alternate icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png">
+
+    <!-- External Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        /* Light Theme (Default) */
         :root {
-            --primary-color: #2196F3;
-            --success-color: #4CAF50;
-            --danger-color: #f44336;
-            --warning-color: #ff9800;
+            --primary-color: #4F46E5;
+            --primary-hover: #4338CA;
+            --success-color: #10B981;
+            --danger-color: #EF4444;
+            --warning-color: #F59E0B;
+            --info-color: #3B82F6;
+
+            /* Light theme colors */
+            --bg-primary: #F9FAFB;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F3F4F6;
+            --text-primary: #111827;
+            --text-secondary: #4B5563;
+            --text-tertiary: #6B7280;
+            --border-color: #E5E7EB;
+            --border-color-light: #F3F4F6;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --shadow-hover: rgba(0, 0, 0, 0.08);
+
+            /* Legacy variables for compatibility */
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --primary-color: #6366F1;
+            --primary-hover: #4F46E5;
+            --success-color: #10B981;
+            --danger-color: #F87171;
+            --warning-color: #FBBF24;
+            --info-color: #60A5FA;
+
+            /* Dark theme colors */
+            --bg-primary: #111827;
+            --bg-secondary: #1F2937;
+            --bg-tertiary: #374151;
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
+            --text-tertiary: #9CA3AF;
+            --border-color: #374151;
+            --border-color-light: #4B5563;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.5);
+
+            /* Legacy variables for compatibility */
+            --gray-50: #374151;
+            --gray-100: #4B5563;
+            --gray-200: #6B7280;
+            --gray-300: #9CA3AF;
+            --gray-600: #D1D5DB;
+            --gray-700: #E5E7EB;
+            --gray-900: #F9FAFB;
         }
 
         body {
-            background-color: #f5f5f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #1976D2 100%);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem 0;
         }
 
         .navbar-brand {
-            font-weight: 600;
-            font-size: 1.3rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -0.025em;
         }
 
         .main-container {
-            padding: 20px 0;
+            padding: 24px 0;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .card {
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px var(--shadow-color);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+            background: var(--bg-secondary);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px var(--shadow-hover);
         }
 
         .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
             font-weight: 600;
+            padding: 16px 20px;
+            border-radius: 12px 12px 0 0;
+            color: var(--text-primary);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 8px 16px;
+            transition: all 0.2s;
+            border: none;
         }
 
         .btn-primary {
@@ -52,61 +142,234 @@
         }
 
         .btn-primary:hover {
-            background-color: #1976D2;
-            border-color: #1976D2;
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #DC2626;
+            transform: translateY(-1px);
         }
 
         .status-badge {
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
         }
 
         .status-success {
-            background-color: #c8e6c9;
-            color: #2e7d32;
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        [data-theme="dark"] .status-success {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #6EE7B7;
         }
 
         .status-failed {
-            background-color: #ffcdd2;
-            color: #c62828;
+            background-color: #FEE2E2;
+            color: #991B1B;
+        }
+
+        [data-theme="dark"] .status-failed {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #FCA5A5;
         }
 
         .status-syncing {
-            background-color: #fff9c4;
-            color: #f57f17;
+            background-color: #FEF3C7;
+            color: #92400E;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        [data-theme="dark"] .status-syncing {
+            background-color: rgba(251, 191, 36, 0.2);
+            color: #FCD34D;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-pending {
+            background-color: var(--gray-200);
+            color: var(--gray-700);
         }
 
         .dashboard-stat {
             text-align: center;
-            padding: 20px;
-            border-radius: 8px;
-            background: white;
-            margin-bottom: 15px;
+            padding: 24px;
+            border-radius: 12px;
+            background: var(--bg-secondary);
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .dashboard-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-hover);
         }
 
         .dashboard-stat-value {
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 2.5rem;
+            font-weight: 700;
             color: var(--primary-color);
+            margin: 8px 0;
         }
 
         .dashboard-stat-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 5px;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 8px;
+            font-weight: 500;
         }
 
         .tab-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 0 0 8px 8px;
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+            padding: 0 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--gray-600);
+            font-weight: 500;
+            padding: 16px 20px;
+            transition: all 0.2s;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: var(--primary-color);
+            border: none;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .table {
+            margin-bottom: 0;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background-color: transparent;
+        }
+
+        .table thead th {
+            background-color: var(--bg-tertiary);
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 12px 16px;
+        }
+
+        .table tbody td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+        }
+
+        tbody tr {
+            transition: all 0.2s;
+            background-color: var(--bg-secondary);
+        }
+
+        tbody tr:hover {
+            background-color: var(--bg-tertiary);
         }
 
         .modal-header {
             background-color: var(--primary-color);
             color: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-content {
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+            background-color: var(--bg-secondary);
+        }
+
+        .modal-body {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-footer {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            transition: all 0.2s;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Refresh button style */
+        .btn-refresh {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-refresh:hover {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
         }
 
         .loading-spinner {
@@ -121,14 +384,35 @@
         .alert {
             border-radius: 8px;
             margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+            color: var(--text-primary);
+        }
+
+        .alert-warning {
+            background-color: rgba(251, 191, 36, 0.1);
+            border-color: rgba(251, 191, 36, 0.3);
+            color: var(--text-primary);
+        }
+
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--text-primary);
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--text-primary);
         }
 
         .table {
             margin-bottom: 0;
-        }
-
-        tbody tr:hover {
-            background-color: #f5f5f5;
         }
 
         .nav-tabs .nav-link.active {
@@ -147,15 +431,17 @@
         }
 
         .toast-message {
-            background: white;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px var(--shadow-hover);
             padding: 16px 20px;
             display: flex;
             align-items: center;
             gap: 12px;
             min-width: 300px;
             animation: slideIn 0.3s ease-out;
+            color: var(--text-primary);
         }
 
         @keyframes slideIn {
@@ -176,28 +462,64 @@
             }
         }
 
+        /* Theme Switcher Styles */
+        .theme-switcher {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 4px;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .theme-btn.active {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            font-weight: 600;
+        }
+
+        .theme-btn i {
+            font-size: 1rem;
+        }
+
         .toast-message.hide {
             animation: slideOut 0.3s ease-out forwards;
         }
 
         .toast-message.success {
             border-left: 4px solid var(--success-color);
-            color: #2e7d32;
         }
 
         .toast-message.error {
             border-left: 4px solid var(--danger-color);
-            color: #c62828;
         }
 
         .toast-message.warning {
             border-left: 4px solid var(--warning-color);
-            color: #e65100;
         }
 
         .toast-message.info {
             border-left: 4px solid var(--primary-color);
-            color: #0d47a1;
         }
 
         .toast-icon {
@@ -212,7 +534,7 @@
         .toast-close {
             background: none;
             border: none;
-            color: #666;
+            color: var(--text-tertiary);
             cursor: pointer;
             font-size: 1.2rem;
             padding: 0;
@@ -220,7 +542,7 @@
         }
 
         .toast-close:hover {
-            color: #000;
+            color: var(--text-primary);
         }
 
         /* Loading overlay */
@@ -246,6 +568,23 @@
             height: 3rem;
             color: white;
         }
+
+        /* Log output container */
+        .log-output-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: var(--bg-tertiary);
+        }
+
+        /* Text utilities */
+        .text-muted {
+            color: var(--text-tertiary) !important;
+        }
+
+        /* Small text */
+        small.text-muted {
+            color: var(--text-tertiary) !important;
+        }
     </style>
 </head>
 <body>
@@ -265,9 +604,23 @@
             <span class="navbar-brand">
                 <i class="bi bi-arrow-repeat"></i> GitHub 镜像同步
             </span>
-            <span class="navbar-text text-white">
-                v1.0.0
-            </span>
+            <div class="d-flex align-items-center gap-3">
+                <!-- 主题切换器 -->
+                <div class="theme-switcher">
+                    <button class="theme-btn" data-theme="light" title="浅色主题">
+                        <i class="bi bi-sun-fill"></i>
+                    </button>
+                    <button class="theme-btn active" data-theme="auto" title="跟随系统">
+                        <i class="bi bi-circle-half"></i>
+                    </button>
+                    <button class="theme-btn" data-theme="dark" title="深色主题">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                </div>
+                <span class="navbar-text text-white">
+                    v2.0.0
+                </span>
+            </div>
         </div>
     </nav>
 
@@ -290,7 +643,7 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="sync-tab" data-bs-toggle="tab" href="#sync">
-                    <i class="bi bi-arrow-repeat"></i> 同步控制
+                    <i class="bi bi-clock-history"></i> 同步历史
                 </a>
             </li>
             <li class="nav-item">
@@ -380,7 +733,7 @@
                                     <th>状态</th>
                                     <th>大小</th>
                                     <th>最后同步</th>
-                                    <th>操作</th>
+                                    <th style="width: 120px;">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -393,22 +746,14 @@
                 </div>
             </div>
 
-            <!-- Sync Control Tab -->
+            <!-- Sync History Tab -->
             <div class="tab-pane fade" id="sync">
                 <div class="card" style="margin-top: 20px;">
-                    <div class="card-header">
-                        <i class="bi bi-arrow-repeat"></i> 同步控制
-                    </div>
-                    <div class="card-body">
-                        <button class="btn btn-lg btn-success" id="syncNowBtn" style="width: 100%; padding: 20px;">
-                            <i class="bi bi-play-circle"></i> 立即同步所有仓库
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history"></i> 同步历史</span>
+                        <button class="btn btn-sm btn-refresh" id="refreshSyncHistoryBtn" title="刷新同步历史">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
                         </button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-hourglass"></i> 同步历史
                     </div>
                     <div class="card-body">
                         <table class="table table-hover" id="syncHistoryTable">
@@ -419,11 +764,12 @@
                                     <th>状态</th>
                                     <th>耗时</th>
                                     <th>时间</th>
+                                    <th style="width: 100px;">详情</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">加载中...</td>
+                                    <td colspan="6" class="text-center text-muted">加载中...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -434,7 +780,7 @@
             <!-- Config Tab -->
             <div class="tab-pane fade" id="config">
                 <div class="row" style="margin-top: 20px;">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
                                 <i class="bi bi-github"></i> GitHub 配置
@@ -443,6 +789,9 @@
                                 <div class="mb-3">
                                     <label class="form-label">GitHub Token</label>
                                     <input type="password" class="form-control" id="githubToken" placeholder="输入 GitHub Token">
+                                    <small class="form-text text-muted">
+                                        用于访问私有仓库。公开仓库可留空。
+                                    </small>
                                 </div>
                                 <button class="btn btn-primary" id="validateGithubBtn">
                                     <i class="bi bi-check-circle"></i> 验证连接
@@ -450,26 +799,26 @@
                                 <div id="githubStatus" class="mt-2"></div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <div class="card">
+                        <div class="card mt-3">
                             <div class="card-header">
-                                <i class="bi bi-git"></i> Gitea 配置
+                                <i class="bi bi-info-circle"></i> Gitea 配置说明
                             </div>
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Gitea URL</label>
-                                    <input type="text" class="form-control" id="giteaUrl" placeholder="https://gitea.example.com">
+                                <div class="alert alert-info mb-0">
+                                    <h6><i class="bi bi-lightbulb"></i> 配置方式</h6>
+                                    <p class="mb-2">Gitea 相关配置只能通过环境变量设置，无法在 Web UI 中修改。</p>
+                                    <p class="mb-2"><strong>环境变量：</strong></p>
+                                    <ul class="mb-0">
+                                        <li><code>GITEA_URL</code> - Gitea 服务器地址</li>
+                                        <li><code>GITEA_TOKEN</code> - Gitea 访问令牌</li>
+                                        <li><code>GITEA_USERNAME</code> - Gitea 用户名</li>
+                                    </ul>
+                                    <p class="mt-2 mb-0">
+                                        <i class="bi bi-book"></i> 详细配置请查看
+                                        <a href="https://github.com/yourname/mirror-git/blob/master/README.md" target="_blank">README.md</a>
+                                    </p>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Gitea Token</label>
-                                    <input type="password" class="form-control" id="giteaToken" placeholder="输入 Gitea Token">
-                                </div>
-                                <button class="btn btn-primary" id="validateGiteaBtn">
-                                    <i class="bi bi-check-circle"></i> 验证连接
-                                </button>
-                                <div id="giteaStatus" class="mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -514,6 +863,124 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" id="addRepoBtn">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Repository Modal -->
+    <div class="modal fade" id="deleteRepoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger">
+                    <h5 class="modal-title text-white">
+                        <i class="bi bi-trash"></i> 删除仓库
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        您即将删除仓库 <strong id="deleteRepoName"></strong>。请选择删除选项：
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="deleteLocal">
+                        <label class="form-check-label" for="deleteLocal">
+                            <strong>删除本地克隆文件</strong>
+                            <small class="d-block text-muted">删除本地存储的仓库克隆（释放磁盘空间）</small>
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="deleteGitea">
+                        <label class="form-check-label" for="deleteGitea">
+                            <strong>删除 Gitea 仓库</strong>
+                            <small class="d-block text-muted">从 Gitea 服务器删除镜像仓库（不可恢复）</small>
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="deleteHistory" checked>
+                        <label class="form-check-label" for="deleteHistory">
+                            <strong>删除同步历史</strong>
+                            <small class="d-block text-muted">删除该仓库的所有同步历史记录</small>
+                        </label>
+                    </div>
+                    <input type="hidden" id="deleteRepoId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-trash"></i> 确认删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Detail Modal -->
+    <div class="modal fade" id="syncDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle"></i> 同步详情
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6><i class="bi bi-collection"></i> 仓库信息</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">仓库名称</small>
+                                        <div id="detailRepoName">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">操作类型</small>
+                                        <div id="detailOperation">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">状态</small>
+                                        <div id="detailStatus">-</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">开始时间</small>
+                                        <div id="detailStartTime">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">结束时间</small>
+                                        <div id="detailEndTime">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">耗时</small>
+                                        <div id="detailDuration">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="errorMessageSection" style="display: none;">
+                        <h6><i class="bi bi-exclamation-triangle text-danger"></i> 错误信息</h6>
+                        <div class="alert alert-danger">
+                            <pre id="detailErrorMessage" style="margin: 0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="logOutputSection" style="display: none;">
+                        <h6><i class="bi bi-terminal"></i> 执行日志</h6>
+                        <div class="card">
+                            <div class="card-body log-output-container">
+                                <pre id="detailLogOutput" style="margin: 0; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                 </div>
             </div>
         </div>
@@ -648,21 +1115,46 @@
             loadSyncHistory();
 
             // Add event listeners
-            document.getElementById('syncNowBtn').addEventListener('click', syncNow);
             document.getElementById('syncAllBtn').addEventListener('click', syncAll);
             document.getElementById('addRepoBtn').addEventListener('click', addRepository);
+            document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
             document.getElementById('validateGithubBtn').addEventListener('click', validateGithub);
-            document.getElementById('validateGiteaBtn').addEventListener('click', validateGitea);
+            document.getElementById('refreshSyncHistoryBtn').addEventListener('click', refreshSyncHistory);
+
+            // Initialize tab routing
+            initTabRouting();
         });
 
         async function loadDashboard() {
             try {
-                const data = await apiCall('/monitor/dashboard');
+                // 获取所有仓库数据
+                const repos = await apiCall('/repositories');
 
-                document.getElementById('totalRepos').textContent = data.repositories?.total || 0;
-                document.getElementById('syncedRepos').textContent = data.sync?.success || 0;
-                document.getElementById('failedRepos').textContent = data.sync?.failed || 0;
-                document.getElementById('successRate').textContent = (data.sync?.success_rate || 0).toFixed(1) + '%';
+                // 统计基于仓库最终状态
+                const totalRepos = repos.length || 0;
+                let syncedRepos = 0;
+                let failedRepos = 0;
+                let pendingRepos = 0;
+
+                repos.forEach(repo => {
+                    const status = repo.last_sync_status;
+                    if (status === 'success') {
+                        syncedRepos++;
+                    } else if (status === 'failed') {
+                        failedRepos++;
+                    } else if (status === 'pending' || !status) {
+                        pendingRepos++;
+                    }
+                });
+
+                // 计算成功率
+                const successRate = totalRepos > 0 ? (syncedRepos / totalRepos * 100) : 0;
+
+                // 更新显示
+                document.getElementById('totalRepos').textContent = totalRepos;
+                document.getElementById('syncedRepos').textContent = syncedRepos;
+                document.getElementById('failedRepos').textContent = failedRepos;
+                document.getElementById('successRate').textContent = successRate.toFixed(1) + '%';
             } catch (error) {
                 console.error('Failed to load dashboard:', error);
                 // Don't show error toast for dashboard load - just silently fail
@@ -693,6 +1185,9 @@
                             <button class="btn btn-sm btn-primary" onclick="syncRepository(${repo.id})" title="同步此仓库">
                                 <i class="bi bi-arrow-repeat"></i>
                             </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteRepository(${repo.id}, '${repo.name}')" title="删除此仓库">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -704,24 +1199,48 @@
 
         async function loadSyncHistory() {
             try {
-                const data = await apiCall('/sync/history?limit=10');
+                const data = await apiCall('/sync/history?limit=50');
 
                 const tbody = document.querySelector('#syncHistoryTable tbody');
                 tbody.innerHTML = '';
 
                 if (!Array.isArray(data) || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">还没有同步记录</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">还没有同步记录</td></tr>';
                     return;
                 }
 
                 data.forEach(record => {
                     const row = document.createElement('tr');
+
+                    // Format datetime to local timezone
+                    const createdDate = new Date(record.created_at);
+                    const formattedDate = createdDate.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+
+                    // Build detail button
+                    let detailBtn = '';
+                    if (record.error_message || record.log_output) {
+                        detailBtn = `<button class="btn btn-sm btn-info" onclick='viewSyncDetail(${JSON.stringify(record).replace(/'/g, "&apos;")})' title="查看详情">
+                            <i class="bi bi-info-circle"></i>
+                        </button>`;
+                    } else {
+                        detailBtn = '<span class="text-muted">-</span>';
+                    }
+
                     row.innerHTML = `
                         <td>${record.repository_name}</td>
                         <td>${record.operation_type}</td>
                         <td><span class="status-badge status-${record.status || 'unknown'}">${record.status || '-'}</span></td>
                         <td>${(record.duration_seconds || 0).toFixed(2)}s</td>
-                        <td>${new Date(record.created_at).toLocaleString()}</td>
+                        <td>${formattedDate}</td>
+                        <td>${detailBtn}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -730,41 +1249,69 @@
             }
         }
 
-        async function syncNow() {
+        async function syncAll() {
             try {
-                toast.info('正在同步所有仓库...');
+                toast.info('正在启动同步任务...');
                 const data = await apiCall('/sync/all', { method: 'POST' });
-                toast.success(`同步完成: ${data.success || 0} 成功, ${data.failed || 0} 失败`);
-                loadDashboard();
-                loadRepositories();
-                loadSyncHistory();
+                toast.success(`✓ ${data.message || '同步任务已启动'}`);
+
+                // Start polling for updates
+                startSyncPolling();
             } catch (error) {
-                toast.error('同步失败: ' + (error.message || '未知错误'));
+                toast.error('启动同步失败: ' + (error.message || '未知错误'));
                 console.error('Sync error:', error);
             }
-        }
-
-        async function syncAll() {
-            syncNow();
         }
 
         async function syncRepository(repoId) {
             try {
-                toast.info('正在同步仓库...');
+                toast.info('正在启动同步任务...');
                 const data = await apiCall(`/repositories/${repoId}/sync`, { method: 'POST' });
-                if (data.status === 'success') {
-                    toast.success(`✓ ${data.repository} 同步完成`);
-                } else {
-                    toast.warning(`${data.repository} 同步: ${data.error || '完成'}`);
-                }
-                loadDashboard();
-                loadRepositories();
-                loadSyncHistory();
+                toast.success(`✓ ${data.message || '同步任务已启动'}`);
+
+                // Start polling for updates
+                startSyncPolling();
             } catch (error) {
-                toast.error('同步启动失败: ' + (error.message || '未知错误'));
+                toast.error('启动同步失败: ' + (error.message || '未知错误'));
                 console.error('Sync error:', error);
             }
         }
+
+        // Auto-refresh mechanism when sync is in progress
+        let syncPollingInterval = null;
+
+        function startSyncPolling() {
+            // Clear existing interval
+            if (syncPollingInterval) {
+                clearInterval(syncPollingInterval);
+            }
+
+            // Poll every 2 seconds
+            syncPollingInterval = setInterval(async () => {
+                await loadRepositories();
+                await loadDashboard();
+                await loadSyncHistory();
+
+                // Check if any repo is still syncing
+                const data = await apiCall('/repositories');
+                const stillSyncing = data.some(repo => repo.last_sync_status === 'syncing');
+
+                // Stop polling if nothing is syncing
+                if (!stillSyncing) {
+                    clearInterval(syncPollingInterval);
+                    syncPollingInterval = null;
+                    toast.info('所有同步任务已完成');
+                }
+            }, 2000);
+        }
+
+        // Stop polling when page is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && syncPollingInterval) {
+                clearInterval(syncPollingInterval);
+                syncPollingInterval = null;
+            }
+        });
 
         async function addRepository() {
             const url = document.getElementById('repoUrl').value;
@@ -808,6 +1355,124 @@
             }
         }
 
+        function deleteRepository(repoId, repoName) {
+            // Show delete confirmation modal
+            document.getElementById('deleteRepoId').value = repoId;
+            document.getElementById('deleteRepoName').textContent = repoName;
+
+            // Reset checkboxes
+            document.getElementById('deleteLocal').checked = false;
+            document.getElementById('deleteGitea').checked = false;
+            document.getElementById('deleteHistory').checked = true;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('deleteRepoModal'));
+            modal.show();
+        }
+
+        async function confirmDelete() {
+            const repoId = document.getElementById('deleteRepoId').value;
+            const deleteLocal = document.getElementById('deleteLocal').checked;
+            const deleteGitea = document.getElementById('deleteGitea').checked;
+            const deleteHistory = document.getElementById('deleteHistory').checked;
+
+            try {
+                toast.info('正在删除仓库...');
+
+                const params = new URLSearchParams({
+                    delete_local: deleteLocal,
+                    delete_gitea: deleteGitea,
+                    delete_history: deleteHistory
+                });
+
+                const response = await fetch(`${API_BASE}/repositories/${repoId}?${params}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '删除失败');
+                }
+
+                // Hide modal
+                bootstrap.Modal.getInstance(document.getElementById('deleteRepoModal')).hide();
+
+                // Show success message
+                let message = `✓ ${data.message}`;
+                if (data.deleted && data.deleted.length > 0) {
+                    message += `\n已删除: ${data.deleted.join(', ')}`;
+                }
+                toast.success(message, 5000);
+
+                // Show warnings if any
+                if (data.errors && data.errors.length > 0) {
+                    data.errors.forEach(error => {
+                        toast.warning(error, 6000);
+                    });
+                }
+
+                // Reload repositories
+                loadRepositories();
+                loadDashboard();
+            } catch (error) {
+                toast.error('删除失败: ' + (error.message || '未知错误'));
+                console.error('Delete repo error:', error);
+            }
+        }
+
+        function viewSyncDetail(record) {
+            // Format dates to local timezone
+            const formatDate = (isoString) => {
+                if (!isoString) return '-';
+                const date = new Date(isoString);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            };
+
+            // Fill in basic info
+            document.getElementById('detailRepoName').textContent = record.repository_name || '-';
+            document.getElementById('detailOperation').textContent = record.operation_type || '-';
+
+            const statusHtml = `<span class="status-badge status-${record.status || 'unknown'}">${record.status || '-'}</span>`;
+            document.getElementById('detailStatus').innerHTML = statusHtml;
+
+            document.getElementById('detailStartTime').textContent = formatDate(record.start_time);
+            document.getElementById('detailEndTime').textContent = formatDate(record.end_time);
+            document.getElementById('detailDuration').textContent = `${(record.duration_seconds || 0).toFixed(2)}秒`;
+
+            // Show/hide error message section
+            const errorSection = document.getElementById('errorMessageSection');
+            const errorMessage = document.getElementById('detailErrorMessage');
+            if (record.error_message) {
+                errorMessage.textContent = record.error_message;
+                errorSection.style.display = 'block';
+            } else {
+                errorSection.style.display = 'none';
+            }
+
+            // Show/hide log output section
+            const logSection = document.getElementById('logOutputSection');
+            const logOutput = document.getElementById('detailLogOutput');
+            if (record.log_output) {
+                logOutput.textContent = record.log_output;
+                logSection.style.display = 'block';
+            } else {
+                logSection.style.display = 'none';
+            }
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('syncDetailModal'));
+            modal.show();
+        }
+
         async function validateGithub() {
             const token = document.getElementById('githubToken').value;
             if (!token) {
@@ -846,44 +1511,129 @@
             }
         }
 
-        async function validateGitea() {
-            const url = document.getElementById('giteaUrl').value;
-            const token = document.getElementById('giteaToken').value;
-
-            if (!url || !token) {
-                toast.warning('请输入 Gitea URL 和 Token');
-                return;
-            }
+        // Refresh sync history
+        async function refreshSyncHistory() {
+            const btn = document.getElementById('refreshSyncHistoryBtn');
+            btn.disabled = true;
 
             try {
-                toast.info('正在验证 Gitea 连接...');
-                const response = await fetch(`${API_BASE}/config/validate/gitea`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, token })
-                });
-
-                const data = await response.json();
-                const statusDiv = document.getElementById('giteaStatus');
-
-                if (!response.ok) {
-                    statusDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ${data.detail || '验证失败'}</div>`;
-                    toast.error('Gitea 验证失败: ' + (data.detail || '未知错误'));
-                    return;
-                }
-
-                if (data.valid) {
-                    statusDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ✓ ' + (data.message || 'Gitea 连接成功') + '</div>';
-                    toast.success('✓ Gitea 连接成功');
-                } else {
-                    statusDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ' + (data.message || '连接失败') + '</div>';
-                    toast.error('Gitea 连接失败: ' + (data.message || ''));
-                }
+                await loadSyncHistory();
+                toast.success('同步历史已刷新');
             } catch (error) {
-                document.getElementById('giteaStatus').innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> 验证失败: 网络错误</div>';
-                toast.error('Gitea 验证失败: ' + (error.message || '网络错误'));
-                console.error('Gitea validation error:', error);
+                toast.error('刷新失败: ' + (error.message || '未知错误'));
+            } finally {
+                btn.disabled = false;
             }
+        }
+
+        // Tab routing functionality
+        function initTabRouting() {
+            const tabTriggers = document.querySelectorAll('[data-bs-toggle="tab"]');
+
+            // Listen to tab changes and update URL
+            tabTriggers.forEach(trigger => {
+                trigger.addEventListener('shown.bs.tab', (event) => {
+                    const tabId = event.target.getAttribute('href').substring(1);
+                    history.pushState(null, '', `#${tabId}`);
+                });
+            });
+
+            // Handle browser back/forward
+            window.addEventListener('popstate', () => {
+                const hash = window.location.hash || '#dashboard';
+                const tabId = hash.substring(1);
+                const tabTrigger = document.querySelector(`[href="${hash}"]`);
+
+                if (tabTrigger) {
+                    const tab = new bootstrap.Tab(tabTrigger);
+                    tab.show();
+                }
+            });
+
+            // Load initial tab from URL
+            const initialHash = window.location.hash || '#dashboard';
+            const initialTab = document.querySelector(`[href="${initialHash}"]`);
+            if (initialTab) {
+                const tab = new bootstrap.Tab(initialTab);
+                tab.show();
+            }
+
+            // ========================================
+            // Theme Switcher Logic
+            // ========================================
+
+            // Theme configuration
+            const THEME_KEY = 'mirror-git-theme';
+            const themes = {
+                light: 'light',
+                dark: 'dark',
+                auto: 'auto'
+            };
+
+            // Get system theme preference
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            // Apply theme to document
+            function applyTheme(theme) {
+                const effectiveTheme = theme === 'auto' ? getSystemTheme() : theme;
+
+                if (effectiveTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            }
+
+            // Update active button state
+            function updateActiveButton(theme) {
+                document.querySelectorAll('.theme-btn').forEach(btn => {
+                    const btnTheme = btn.getAttribute('data-theme');
+                    if (btnTheme === theme) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+
+            // Set theme and save preference
+            function setTheme(theme) {
+                localStorage.setItem(THEME_KEY, theme);
+                applyTheme(theme);
+                updateActiveButton(theme);
+            }
+
+            // Initialize theme
+            function initTheme() {
+                // Get saved theme or default to 'auto'
+                const savedTheme = localStorage.getItem(THEME_KEY) || 'auto';
+                setTheme(savedTheme);
+            }
+
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                const currentTheme = localStorage.getItem(THEME_KEY) || 'auto';
+                if (currentTheme === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+
+            // Add click handlers to theme buttons
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const theme = this.getAttribute('data-theme');
+                    setTheme(theme);
+                });
+            });
+
+            // Initialize theme on page load
+            initTheme();
+
+            // ========================================
+            // End Theme Switcher Logic
+            // ========================================
         }
     </script>
 </body>

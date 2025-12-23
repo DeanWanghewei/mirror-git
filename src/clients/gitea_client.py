@@ -38,7 +38,8 @@ class GiteaClient:
                 "Content-Type": "application/json",
                 "User-Agent": "Mirror-Git/1.0"
             },
-            "timeout": 30.0
+            "timeout": 30.0,
+            "verify": False  # 禁用 SSL 验证（支持自签名证书和 HTTP）
         }
 
         if proxy_config and proxy_config.enabled and proxy_config.url:
@@ -53,6 +54,10 @@ class GiteaClient:
             self.logger.debug(f"Using proxy: {proxy_config.url}")
 
         self.session = httpx.Client(**client_kwargs)
+
+        # Log connection info (for debugging)
+        self.logger.info(f"Gitea Client initialized for {base_url}")
+        self.logger.debug(f"Token length: {len(config.token) if config.token else 0} chars")
 
     def __del__(self):
         """Close session on cleanup."""
@@ -164,6 +169,8 @@ class GiteaClient:
             api_endpoint = "/api/v1/user/repos"
             location = name
 
+        self.logger.debug(f"Creating repository at {api_endpoint}: {location}")
+
         try:
             response = self.session.post(api_endpoint, json=payload)
             response.raise_for_status()
@@ -175,13 +182,29 @@ class GiteaClient:
                 self.logger.warning(f"Repository already exists: {location}")
                 raise ValueError(f"Repository already exists: {location}")
             elif e.response.status_code == 403:  # Forbidden
+                error_detail = ""
+                try:
+                    error_body = e.response.json()
+                    error_detail = f"\nGitea 返回: {error_body}"
+                except:
+                    error_detail = f"\nHTTP 响应: {e.response.text[:200]}"
+
                 error_msg = (
-                    f"Permission denied creating repository {location}. "
-                    f"Ensure your Gitea token has these permissions: "
-                    f"'repo', 'admin:repo_hook', 'admin:org' (for organizations). "
-                    f"See GITEA_TOKEN_PERMISSIONS.md for details."
+                    f"❌ 权限不足: 无法创建仓库 {location}\n"
+                    f"\n【问题原因】\n"
+                    f"  当前 Gitea Token 缺少必需的权限范围 (scopes)\n"
+                    f"\n【所需权限】\n"
+                    f"  ✓ repo (仓库读写权限)\n"
+                    f"  ✓ write:user (创建仓库权限)\n"
+                    f"  ✓ admin:org (组织仓库权限，如果需要在组织中创建)\n"
+                    f"\n【解决方案】\n"
+                    f"  1. 登录 Gitea: {self.config.url}\n"
+                    f"  2. 进入: 设置 → 应用程序 → 访问令牌\n"
+                    f"  3. 重新生成具有上述权限的 Token\n"
+                    f"  4. 更新环境变量 GITEA_TOKEN 并重启容器"
+                    f"{error_detail}"
                 )
-                self.logger.warning(error_msg)
+                self.logger.error(error_msg)
                 raise PermissionError(error_msg)
             elif e.response.status_code == 404:  # Not Found
                 error_msg = (

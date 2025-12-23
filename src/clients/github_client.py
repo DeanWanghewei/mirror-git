@@ -26,14 +26,27 @@ class GitHubClient:
         self.config = config
         self.logger = get_logger("github_client", log_config)
 
+        # Build headers
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "Mirror-Git/1.2.0"
+        }
+
+        # Only add Authorization header if token is provided
+        if config.token:
+            headers["Authorization"] = f"token {config.token}"
+            self.logger.debug("GitHub client initialized with authentication")
+        else:
+            self.logger.warning(
+                "GitHub client initialized without token - "
+                "API rate limits apply (60 requests/hour). "
+                "Only public repositories are accessible."
+            )
+
         # Build httpx client with optional proxy
         client_kwargs = {
             "base_url": config.api_url,
-            "headers": {
-                "Authorization": f"token {config.token}",
-                "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "Mirror-Git/1.0"
-            },
+            "headers": headers,
             "timeout": 30.0
         }
 

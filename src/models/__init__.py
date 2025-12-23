@@ -7,7 +7,7 @@ Defines data models for repositories, sync history, and application configuratio
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text, Boolean, create_engine
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text, Boolean, create_engine, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -21,15 +21,20 @@ class Repository(Base):
     __tablename__ = "repositories"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False, index=True)
     owner = Column(String(255), nullable=False)
-    url = Column(String(512), nullable=False, unique=True)
+    url = Column(String(512), nullable=False, index=True)
     description = Column(Text, nullable=True)
     enabled = Column(Boolean, default=True)
     tags = Column(String(512), nullable=True)  # Comma-separated tags
 
     # Gitea target configuration
     gitea_owner = Column(String(255), nullable=True)  # Organization or user namespace in Gitea
+
+    # Composite unique constraint: same GitHub repo can be mirrored to different Gitea orgs
+    __table_args__ = (
+        UniqueConstraint('url', 'gitea_owner', name='uix_url_gitea_owner'),
+    )
 
     # Local path
     local_path = Column(String(512), nullable=True)

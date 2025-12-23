@@ -1,6 +1,6 @@
 {
   "description": "GitHub 仓库镜像列表配置",
-  "version": "1.0",
+  "version": "1.2",
   "repositories": [
     {
       "name": "kubernetes/kubernetes",
