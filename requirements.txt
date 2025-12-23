@@ -12,6 +12,9 @@ GitPython>=3.1.0
 # Task scheduling
 APScheduler>=3.10.0
 
+# Timezone support
+pytz>=2023.3
+
 # Logging and monitoring
 colorlog>=6.7.0
 

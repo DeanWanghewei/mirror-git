@@ -802,6 +802,29 @@
 
                         <div class="card mt-3">
                             <div class="card-header">
+                                <i class="bi bi-info-circle"></i> 系统信息
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info mb-0">
+                                    <h6><i class="bi bi-clock-history"></i> 自动同步</h6>
+                                    <p class="mb-2">系统会根据配置的时间间隔自动同步所有启用的仓库。</p>
+                                    <p class="mb-2"><strong>同步间隔：</strong></p>
+                                    <ul class="mb-2">
+                                        <li>默认间隔：每 <strong>1 小时</strong>（3600秒）</li>
+                                        <li>可通过环境变量 <code>SYNC_INTERVAL</code> 自定义</li>
+                                    </ul>
+                                    <hr>
+                                    <h6><i class="bi bi-globe"></i> 时区设置</h6>
+                                    <p class="mb-2">所有时间将自动转换为您浏览器的本地时区显示。</p>
+                                    <p class="mb-0">
+                                        可通过环境变量 <code>TIMEZONE</code> 设置应用时区（默认：Asia/Shanghai）
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header">
                                 <i class="bi bi-info-circle"></i> Gitea 配置说明
                             </div>
                             <div class="card-body">

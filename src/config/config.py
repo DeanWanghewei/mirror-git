@@ -85,6 +85,27 @@ class LogConfig(BaseModel):
         return v.upper()
 
 
+class TimezoneConfig(BaseModel):
+    """Timezone configuration."""
+    timezone: str = Field(default="Asia/Shanghai", description="Timezone for display (e.g., Asia/Shanghai, UTC)")
+
+    @validator("timezone")
+    def timezone_valid(cls, v: str) -> str:
+        """Validate timezone string."""
+        try:
+            import pytz
+            pytz.timezone(v)
+            return v
+        except ImportError:
+            # If pytz is not available, just accept the value
+            # The timezone will be used as-is without validation
+            return v
+        except Exception as e:
+            # Catch any pytz errors
+            raise ValueError(f"Unknown timezone: {v}. Use IANA timezone names like 'Asia/Shanghai' or 'UTC'")
+
+
+
 class NotificationConfig(BaseModel):
     """Notification configuration."""
     email_enabled: bool = Field(default=False, description="Enable email notifications")
@@ -105,6 +126,7 @@ class SystemConfig(BaseModel):
     sync: SyncConfig
     proxy: ProxyConfig
     log: LogConfig
+    timezone: TimezoneConfig
     notification: NotificationConfig
 
 
@@ -204,6 +226,10 @@ class ConfigManager:
             backup_count=int(self._get_env("LOG_BACKUP_COUNT", default="10"))
         )
 
+        timezone_config = TimezoneConfig(
+            timezone=self._get_env("TIMEZONE", default="Asia/Shanghai")
+        )
+
         notification_config = NotificationConfig(
             email_enabled=self._get_env("NOTIFICATION_EMAIL_ENABLED", default="false").lower() == "true",
             smtp_server=self._get_env("SMTP_SERVER"),
@@ -221,6 +247,7 @@ class ConfigManager:
             sync=sync_config,
             proxy=proxy_config,
             log=log_config,
+            timezone=timezone_config,
             notification=notification_config
         )
 

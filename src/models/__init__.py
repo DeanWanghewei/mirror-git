@@ -68,11 +68,11 @@ class Repository(Base):
             "sync_interval": self.sync_interval,
             "priority": self.priority,
             "size_mb": self.size_mb,
-            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "last_sync_time": self.last_sync_time.isoformat() + 'Z' if self.last_sync_time else None,
             "last_sync_status": self.last_sync_status,
             "sync_error_message": self.sync_error_message,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
+            "created_at": self.created_at.isoformat() + 'Z',
+            "updated_at": self.updated_at.isoformat() + 'Z',
         }
 
 
@@ -112,15 +112,15 @@ class SyncHistory(Base):
             "operation_type": self.operation_type,
             "status": self.status,
             "error_message": self.error_message,
-            "start_time": self.start_time.isoformat(),
-            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "start_time": self.start_time.isoformat() + 'Z',
+            "end_time": self.end_time.isoformat() + 'Z' if self.end_time else None,
             "duration_seconds": self.duration_seconds,
             "files_added": self.files_added,
             "files_modified": self.files_modified,
             "files_deleted": self.files_deleted,
             "data_size_mb": self.data_size_mb,
             "log_output": self.log_output,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat() + 'Z',
         }
 
 
@@ -142,7 +142,7 @@ class AppConfig(Base):
             "key": self.key,
             "value": self.value,
             "description": self.description,
-            "updated_at": self.updated_at.isoformat(),
+            "updated_at": self.updated_at.isoformat() + 'Z',
         }
 
 
@@ -163,10 +163,10 @@ class SyncLog(Base):
         return {
             "id": self.id,
             "sync_history_id": self.sync_history_id,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() + 'Z',
             "level": self.level,
             "message": self.message,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat() + 'Z',
         }
 
 
