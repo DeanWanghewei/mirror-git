@@ -197,7 +197,7 @@ async def startup_event():
         local_repo_dir.mkdir(parents=True, exist_ok=True)
         print(f"✓ Local repository storage: {_config.sync.local_path}")
 
-        # Initialize scheduler (but don't start it yet)
+        # Initialize scheduler
         from ..scheduler.task_scheduler import TaskScheduler
         _scheduler = TaskScheduler(
             _config.github,
@@ -208,6 +208,19 @@ async def startup_event():
             _config.proxy
         )
         print("✓ Task scheduler initialized")
+
+        # Start the scheduler
+        _scheduler.start()
+        print("✓ Task scheduler started")
+
+        # Schedule automatic sync task
+        sync_interval = _config.sync.interval if _config.sync.interval else 3600
+        try:
+            job_id = _scheduler.schedule_sync(interval_seconds=sync_interval)
+            print(f"✓ Scheduled automatic sync every {sync_interval} seconds (job_id: {job_id})")
+        except Exception as e:
+            print(f"⚠ Could not schedule automatic sync: {e}")
+            print(f"  You can manually schedule sync via API: POST /api/tasks/sync/schedule")
 
         # Validate configurations
         if _config.github:

@@ -585,6 +585,71 @@
         small.text-muted {
             color: var(--text-tertiary) !important;
         }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        input:disabled + .toggle-slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Disabled repository row style */
+        tr.repo-disabled {
+            opacity: 0.6;
+            background-color: var(--bg-tertiary);
+        }
+
+        tr.repo-disabled td {
+            color: var(--text-tertiary);
+        }
+
+        tr.repo-disabled:hover {
+            background-color: var(--bg-tertiary);
+        }
     </style>
 </head>
 <body>
@@ -730,7 +795,8 @@
                                 <tr>
                                     <th>仓库名</th>
                                     <th>GitHub 地址</th>
-                                    <th>状态</th>
+                                    <th style="width: 100px;">启用状态</th>
+                                    <th>同步状态</th>
                                     <th>大小</th>
                                     <th>最后同步</th>
                                     <th style="width: 120px;">操作</th>
@@ -738,7 +804,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">加载中...</td>
+                                    <td colspan="7" class="text-center text-muted">加载中...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1192,20 +1258,36 @@
                 tbody.innerHTML = '';
 
                 if (!Array.isArray(data) || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">还没有添加仓库</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">还没有添加仓库</td></tr>';
                     return;
                 }
 
                 data.forEach(repo => {
                     const row = document.createElement('tr');
+
+                    // Add disabled class if repository is disabled
+                    if (!repo.enabled) {
+                        row.classList.add('repo-disabled');
+                    }
+
+                    // Create enable/disable toggle switch
+                    const toggleSwitch = `
+                        <label class="toggle-switch" title="${repo.enabled ? '点击禁用' : '点击启用'}">
+                            <input type="checkbox" ${repo.enabled ? 'checked' : ''}
+                                   onchange="toggleRepositoryEnabled(${repo.id}, this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    `;
+
                     row.innerHTML = `
                         <td>${repo.name}</td>
                         <td><a href="${repo.url}" target="_blank">${repo.url}</a></td>
+                        <td>${toggleSwitch}</td>
                         <td><span class="status-badge status-${repo.last_sync_status || 'unknown'}">${repo.last_sync_status || '-'}</span></td>
                         <td>${(repo.size_mb || 0).toFixed(2)} MB</td>
                         <td>${repo.last_sync_time || '-'}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="syncRepository(${repo.id})" title="同步此仓库">
+                            <button class="btn btn-sm btn-primary" onclick="syncRepository(${repo.id})" title="同步此仓库" ${!repo.enabled ? 'disabled' : ''}>
                                 <i class="bi bi-arrow-repeat"></i>
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteRepository(${repo.id}, '${repo.name}')" title="删除此仓库">
@@ -1297,6 +1379,33 @@
             } catch (error) {
                 toast.error('启动同步失败: ' + (error.message || '未知错误'));
                 console.error('Sync error:', error);
+            }
+        }
+
+        async function toggleRepositoryEnabled(repoId, enabled) {
+            try {
+                // Show loading state
+                const toggleInput = event.target;
+                toggleInput.disabled = true;
+
+                // Call API to update repository enabled status
+                await apiCall(`/repositories/${repoId}`, {
+                    method: 'PUT',
+                    body: { enabled: enabled }
+                });
+
+                // Show success message
+                toast.success(`✓ 仓库已${enabled ? '启用' : '禁用'}`);
+
+                // Reload repositories to update UI
+                await loadRepositories();
+                await loadDashboard();
+            } catch (error) {
+                toast.error(`${enabled ? '启用' : '禁用'}仓库失败: ` + (error.message || '未知错误'));
+                console.error('Toggle repository error:', error);
+
+                // Reload to restore correct state
+                await loadRepositories();
             }
         }
 

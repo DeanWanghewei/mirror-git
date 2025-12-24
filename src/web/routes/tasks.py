@@ -107,7 +107,7 @@ async def get_task_status(job_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{job_id}/start")
+@router.post("/start")
 async def start_scheduler():
     """Start the scheduler."""
     from ..app import get_app_state
@@ -128,7 +128,7 @@ async def start_scheduler():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{job_id}/stop")
+@router.post("/stop")
 async def stop_scheduler():
     """Stop the scheduler."""
     from ..app import get_app_state
